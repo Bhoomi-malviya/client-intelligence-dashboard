@@ -14,9 +14,15 @@ localPort = 23786
 run = "pnpm --filter @workspace/fume-dashboard run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/fume-dashboard", "run", "build" ]
 serve = "static"
 publicDir = "artifacts/fume-dashboard/dist/public"
+
+[services.production.build]
+args = ["pnpm", "--filter", "@workspace/fume-dashboard", "run", "build"]
+
+[services.production.build.env]
+PORT = "8080"
+BASE_PATH = "/"
 
 [[services.production.rewrites]]
 from = "/*"
