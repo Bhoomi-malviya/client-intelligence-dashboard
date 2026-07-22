@@ -326,7 +326,46 @@ export function AnalysisPanel() {
             </CardContent>
           </Card>
 
-          {/* 12. Evidence Grounding */}
+          {/* 12. Missing Information */}
+          <Card className="border-slate-300 bg-slate-50 shadow-sm">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-slate-400" />
+                <span className="text-sm font-semibold text-foreground">Missing Information</span>
+              </div>
+
+              {/* Explicit non-inference notice */}
+              <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  <span className="font-bold">The AI did not infer, estimate, or fill in any missing values.</span>{' '}
+                  Fields not explicitly mentioned in the conversation are marked below and reported as absent. No assumptions were made.
+                </p>
+              </div>
+
+              <ul className="space-y-2">
+                {[
+                  { label: 'Water intake', detail: 'Not reported on Days 1, 2, 4, 5, 6 — client only mentioned water on Days 3, 7, 8' },
+                  { label: 'Step count / distance', detail: 'Not mentioned on Days 1, 2, 5, 6 — only referenced on Days 3, 4, 7, 8' },
+                  { label: 'Calorie intake', detail: 'Never tracked or reported across all 8 days — only meal types were shared' },
+                  { label: 'Macro breakdown', detail: 'Protein, carbohydrate, and fat quantities absent from all days' },
+                  { label: 'Mood / energy rating', detail: 'No systematic daily mood or energy score reported; only qualitative remarks' },
+                  { label: 'Body weight / measurements', detail: 'No weight or biometric data shared during this period' },
+                  { label: 'Medication / supplement log', detail: 'No supplements or medications mentioned in the conversation' },
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 border-b border-border/30 pb-2 last:border-0 last:pb-0">
+                    <FumeBadge type="missing_information" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-semibold text-foreground/80">{item.label}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{item.detail}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* 13. Evidence Grounding */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <MessageSquareQuote className="w-4 h-4 text-foreground/70" />
@@ -358,25 +397,18 @@ export function AnalysisPanel() {
                 </div>
               ))}
             </div>
+          </div>
 
-            {/* Missing information notice */}
-            <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg">
-              <p className="text-[11px] text-muted-foreground font-semibold mb-1">Missing Information</p>
-              <ul className="space-y-1">
-                <li className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                  <FumeBadge type="missing_information" />
-                  Water intake not explicitly reported on Days 1, 2, 4, 5, 6
-                </li>
-                <li className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                  <FumeBadge type="missing_information" />
-                  Step count not mentioned on Days 1, 2, 5, 6
-                </li>
-                <li className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                  <FumeBadge type="missing_information" />
-                  Mood / energy rating not systematically tracked
-                </li>
-              </ul>
+          {/* 14. Responsible AI Disclaimer */}
+          <div className="mt-2 p-4 rounded-xl border border-border bg-white flex items-start gap-3">
+            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+              <Brain className="w-3.5 h-3.5 text-primary" />
             </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              <span className="font-semibold text-foreground/70">AI-generated insights are evidence-grounded and intended to support—not replace—human coach review.</span>{' '}
+              All observations are derived exclusively from conversation data and classified by source. Missing data is never estimated.
+              Final decisions on health guidance, interventions, and recommendations should be made by a qualified coach.
+            </p>
           </div>
 
         </div>
