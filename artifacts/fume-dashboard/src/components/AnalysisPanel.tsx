@@ -1,314 +1,385 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MetricCard } from './MetricCard';
-import { FumeBadge } from './Badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Activity, 
-  Droplets, 
-  Moon, 
-  Footprints, 
-  Brain, 
-  Flag, 
-  AlertTriangle, 
-  CheckCircle,
-  Stethoscope,
-  TrendingDown,
-  Calendar,
-  MessageSquareQuote
+import { FumeBadge } from './Badge';
+import { sampleAnalysis, type ClassificationType, type Evidence } from '@/data/analysisData';
+import {
+  Activity,
+  Droplets,
+  Moon,
+  Brain,
+  Flag,
+  AlertTriangle,
+  CheckCircle2,
+  MessageSquareQuote,
+  TrendingUp,
+  Footprints,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+
+function ConfidenceBar({ value }: { value: number }) {
+  const color =
+    value >= 85 ? 'bg-green-500' : value >= 65 ? 'bg-amber-500' : 'bg-red-400';
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${value}%` }} />
+      </div>
+      <span className="text-[10px] font-semibold text-muted-foreground w-8 text-right">{value}%</span>
+    </div>
+  );
+}
+
+function EvidenceList({ items }: { items: Evidence[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? items : items.slice(0, 2);
+  return (
+    <div className="mt-2 space-y-1.5">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Evidence</p>
+      {shown.map((e, i) => (
+        <div key={i} className="flex items-start gap-2 bg-slate-50 border border-border/50 rounded px-2 py-1.5">
+          <MessageSquareQuote className="w-3 h-3 text-muted-foreground mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] text-foreground/80 italic leading-snug">"{e.quote}"</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[10px] text-muted-foreground">Day {e.day}</span>
+              <FumeBadge type={e.classification} />
+            </div>
+          </div>
+        </div>
+      ))}
+      {items.length > 2 && (
+        <button
+          className="text-[10px] text-primary flex items-center gap-1 hover:underline"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? <><ChevronUp className="w-3 h-3" /> Show less</> : <><ChevronDown className="w-3 h-3" /> Show {items.length - 2} more</>}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SectionCard({
+  icon,
+  title,
+  value,
+  summary,
+  confidence,
+  classification,
+  evidence,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+  summary: string;
+  confidence: number;
+  classification: ClassificationType;
+  evidence: Evidence[];
+}) {
+  return (
+    <Card className="shadow-sm">
+      <CardContent className="p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-primary">{icon}</span>
+            <span className="text-sm font-semibold text-foreground">{title}</span>
+          </div>
+          <FumeBadge type={classification} />
+        </div>
+        <p className="text-base font-bold text-foreground">{value}</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">{summary}</p>
+        <div>
+          <p className="text-[10px] text-muted-foreground mb-1">Confidence</p>
+          <ConfidenceBar value={confidence} />
+        </div>
+        <EvidenceList items={evidence} />
+      </CardContent>
+    </Card>
+  );
+}
 
 export function AnalysisPanel() {
-  const [actions, setActions] = useState([
-    { id: '1', label: 'Follow up on sleep hygiene protocol', checked: false },
-    { id: '2', label: 'Share stress management resources', checked: false },
-    { id: '3', label: 'Review nutrition plan for high-stress days', checked: false },
-    { id: '4', label: 'Set a reduced step goal for this week', checked: false },
-  ]);
+  const report = sampleAnalysis;
+
+  const [pendingActions, setPendingActions] = useState(
+    report.pendingActions.map((a, i) => ({ ...a, id: String(i), checked: false }))
+  );
 
   const toggleAction = (id: string) => {
-    setActions(actions.map(a => a.id === id ? { ...a, checked: !a.checked } : a));
+    setPendingActions(prev => prev.map(a => a.id === id ? { ...a, checked: !a.checked } : a));
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { 
-        duration: 0.5,
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0 }
-  };
+  const priorityColor = { high: 'text-red-600', medium: 'text-amber-600', low: 'text-slate-500' };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50/50 dark:bg-background">
+    <div className="flex flex-col h-full bg-slate-50">
       {/* Header */}
-      <div className="px-8 py-5 border-b border-border shrink-0 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="flex items-center gap-2 text-muted-foreground mb-1">
-          <Stethoscope className="w-4 h-4 text-primary" />
-          <span className="text-xs font-semibold tracking-wider uppercase">Fume Intelligence</span>
-        </div>
-        <h2 className="text-xl font-bold tracking-tight text-foreground">Client Intelligence Report</h2>
-        <p className="text-sm text-muted-foreground mt-1">Sarah M. &bull; Week of July 14, 2026 &bull; AI Analysis</p>
+      <div className="px-6 py-4 border-b border-border shrink-0 bg-white sticky top-0 z-10">
+        <h2 className="text-base font-bold text-foreground">Client Intelligence Report</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {report.client} &bull; {report.period} &bull; AI Analysis
+        </p>
       </div>
 
-      <ScrollArea className="flex-1 px-8 py-6">
-        <motion.div 
-          className="flex flex-col gap-6 max-w-4xl mx-auto pb-12"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          
-          {/* 1. Weekly Summary */}
-          <motion.div variants={itemVariants}>
-            <Card className="border-primary/20 bg-primary/5 shadow-sm">
-              <CardContent className="p-5 text-sm leading-relaxed text-foreground/90 font-medium">
-                Sarah had a challenging week with elevated work stress impacting sleep, nutrition, and activity levels. Despite missing most movement goals, she maintained coaching engagement and expressed motivation to improve.
-              </CardContent>
-            </Card>
-          </motion.div>
+      <ScrollArea className="flex-1 px-6 py-4">
+        <div className="flex flex-col gap-5 max-w-3xl mx-auto pb-12">
 
-          {/* 2. Health Metrics Grid */}
-          <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <MetricCard 
+          {/* 1. Weekly Summary */}
+          <Card className="border-primary/20 bg-primary/5 shadow-sm">
+            <CardHeader className="pb-2 pt-4 px-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold text-foreground">Weekly Client Summary</CardTitle>
+                <div className="flex items-center gap-2">
+                  <FumeBadge type="ai_inference" />
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">Confidence</span>
+                    <span className="text-[10px] font-bold text-green-600">{report.weeklySummary.confidence}%</span>
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <p className="text-sm text-foreground/90 leading-relaxed">{report.weeklySummary.text}</p>
+            </CardContent>
+          </Card>
+
+          {/* 2–6. Health Metric Sections */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <SectionCard
+              icon={<Moon className="w-4 h-4" />}
+              title="Sleep Analysis"
+              value={report.sleep.value}
+              summary={report.sleep.summary}
+              confidence={report.sleep.confidence}
+              classification={report.sleep.classification}
+              evidence={report.sleep.evidence}
+            />
+            <SectionCard
               icon={<Activity className="w-4 h-4" />}
               title="Nutrition Adherence"
-              value="42%"
-              progressValue={42}
-              badgeType="reported"
-              badgeLabel="Client Reported"
+              value={report.nutrition.value}
+              summary={report.nutrition.summary}
+              confidence={report.nutrition.confidence}
+              classification={report.nutrition.classification}
+              evidence={report.nutrition.evidence}
             />
-            <MetricCard 
+            <SectionCard
               icon={<Footprints className="w-4 h-4" />}
               title="Exercise / Steps"
-              value="2 of 5 days"
-              progressValue={40}
-              badgeType="fact"
-              badgeLabel="Confirmed Fact"
+              value={report.exercise.value}
+              summary={report.exercise.summary}
+              confidence={report.exercise.confidence}
+              classification={report.exercise.classification}
+              evidence={report.exercise.evidence}
             />
-            <MetricCard 
-              icon={<Moon className="w-4 h-4" />}
-              title="Sleep"
-              value="5.5 hrs avg"
-              progressValue={68}
-              badgeType="fact"
-              badgeLabel="Confirmed Fact"
-            />
-            <MetricCard 
+            <SectionCard
               icon={<Droplets className="w-4 h-4" />}
               title="Water Intake"
-              value="~4 glasses/day"
-              progressValue={50}
-              badgeType="reported"
-              badgeLabel="Client Reported"
+              value={report.waterIntake.value}
+              summary={report.waterIntake.summary}
+              confidence={report.waterIntake.confidence}
+              classification={report.waterIntake.classification}
+              evidence={report.waterIntake.evidence}
             />
-            <MetricCard 
-              icon={<Brain className="w-4 h-4" />}
-              title="Symptoms / Stress"
-              value="Level 7-8/10"
-              progressValue={80} // 80% stress is high, maybe reverse color? We'll leave it as blue for consistency
-              badgeType="inference"
-              badgeLabel="AI Inference"
-            />
-          </motion.div>
-
-          <Separator className="my-2 opacity-50" />
-
-          {/* 3. Engagement Level */}
-          <motion.div variants={itemVariants}>
-            <div className="flex flex-col gap-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4 text-primary" /> Engagement Level
-                </h3>
-                <span className="text-sm font-bold text-primary">Moderate-High</span>
-              </div>
-              <div className="h-2 w-full bg-secondary rounded-full overflow-hidden flex">
-                <div className="h-full bg-emerald-500 w-[75%] rounded-full" />
-              </div>
-              <p className="text-xs text-muted-foreground">Client actively participated, showed self-awareness about barriers.</p>
+            <div className="md:col-span-2">
+              <SectionCard
+                icon={<Brain className="w-4 h-4" />}
+                title="Symptoms / Stress"
+                value={report.symptoms.value}
+                summary={report.symptoms.summary}
+                confidence={report.symptoms.confidence}
+                classification={report.symptoms.classification}
+                evidence={report.symptoms.evidence}
+              />
             </div>
-          </motion.div>
+          </div>
 
-          {/* 4. Risk / Attention Flags & Barriers */}
-          <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                <AlertTriangle className="w-4 h-4 text-amber-500" /> Risk Flags
-              </h3>
-              <div className="flex flex-col gap-3">
-                <div className="p-3 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900 flex flex-col gap-2 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />
-                  <div className="flex justify-between items-start pl-2">
-                    <div className="flex items-center gap-1.5 text-red-700 dark:text-red-400 font-semibold text-sm">
-                      <Flag className="w-3.5 h-3.5" /> HIGH RISK
+          {/* 7. Engagement Level */}
+          <Card className="shadow-sm">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">Engagement Level</span>
+                </div>
+                <FumeBadge type={report.engagement.classification} />
+              </div>
+              <p className="text-base font-bold text-foreground">{report.engagement.value}</p>
+              <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                <div className="h-full bg-green-500 rounded-full" style={{ width: '92%' }} />
+              </div>
+              <p className="text-xs text-muted-foreground">{report.engagement.summary}</p>
+              <div>
+                <p className="text-[10px] text-muted-foreground mb-1">Confidence</p>
+                <ConfidenceBar value={report.engagement.confidence} />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Separator className="opacity-40" />
+
+          {/* 8. Key Barriers */}
+          <Card className="shadow-sm">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-semibold text-foreground">Key Barriers</span>
+              </div>
+              <ul className="space-y-2">
+                {report.keyBarriers.map((b, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                    <div className="flex-1 flex items-start justify-between gap-2">
+                      <span className="text-sm text-foreground/80">{b.barrier}</span>
+                      <FumeBadge type={b.classification} />
                     </div>
-                    <FumeBadge type="fact">Confirmed Fact</FumeBadge>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* 9. Pending Actions */}
+          <Card className="shadow-sm">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center gap-2 mb-1">
+                <CheckCircle2 className="w-4 h-4 text-foreground/70" />
+                <span className="text-sm font-semibold text-foreground">Pending Actions</span>
+              </div>
+              {pendingActions.map((action) => (
+                <div
+                  key={action.id}
+                  className="flex items-center gap-3 py-2 border-b border-border/40 last:border-0 cursor-pointer"
+                  onClick={() => toggleAction(action.id)}
+                >
+                  <Checkbox
+                    id={`action-${action.id}`}
+                    checked={action.checked}
+                    onCheckedChange={() => toggleAction(action.id)}
+                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    data-testid={`checkbox-action-${action.id}`}
+                  />
+                  <label
+                    className={`text-sm flex-1 cursor-pointer ${action.checked ? 'text-muted-foreground line-through' : 'text-foreground/90'}`}
+                  >
+                    {action.action}
+                  </label>
+                  <span className={`text-[10px] font-semibold uppercase ${priorityColor[action.priority]}`}>
+                    {action.priority}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* 10. Risk / Attention Flags */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Flag className="w-4 h-4 text-red-500" />
+              <span className="text-sm font-semibold text-foreground">Risk / Attention Flags</span>
+            </div>
+            {report.riskFlags.map((flag, i) => {
+              const isHigh = flag.severity === 'high';
+              return (
+                <div
+                  key={i}
+                  className={`p-3 rounded-lg border relative overflow-hidden ${isHigh ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}
+                >
+                  <div className={`absolute top-0 left-0 w-1 h-full ${isHigh ? 'bg-red-500' : 'bg-amber-500'}`} />
+                  <div className="pl-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-bold uppercase ${isHigh ? 'text-red-700' : 'text-amber-700'}`}>
+                        {flag.severity} risk
+                      </span>
+                      <FumeBadge type={flag.classification} />
+                    </div>
+                    <p className="text-sm text-foreground/80">{flag.description}</p>
+                    <EvidenceList items={flag.evidence} />
                   </div>
-                  <p className="text-sm text-foreground/80 pl-2">Sleep deprivation (&lt;6 hrs for 5+ days)</p>
                 </div>
-                
-                <div className="p-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900 flex flex-col gap-2 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
-                  <div className="flex justify-between items-start pl-2">
-                    <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-semibold text-sm">
-                      <Flag className="w-3.5 h-3.5" /> MEDIUM RISK
-                    </div>
-                    <FumeBadge type="reported">Client Reported</FumeBadge>
+              );
+            })}
+          </div>
+
+          {/* 11. Recommended Next Action */}
+          <Card className="bg-primary border-primary shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 text-primary-foreground/80 font-semibold text-xs tracking-wider uppercase mb-3">
+                <Brain className="w-4 h-4" />
+                Recommended Next Action for Coach
+              </div>
+              <p className="text-primary-foreground text-sm leading-relaxed">{report.coachRecommendation.text}</p>
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-[10px] text-primary-foreground/60">Confidence</span>
+                <div className="flex-1 h-1.5 bg-primary-foreground/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary-foreground/80 rounded-full"
+                    style={{ width: `${report.coachRecommendation.confidence}%` }}
+                  />
+                </div>
+                <span className="text-[10px] font-bold text-primary-foreground/80">{report.coachRecommendation.confidence}%</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 12. Evidence Grounding */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageSquareQuote className="w-4 h-4 text-foreground/70" />
+              <span className="text-sm font-semibold text-foreground">Evidence Grounding</span>
+              <span className="text-xs text-muted-foreground">— exact quotes from conversation</span>
+            </div>
+
+            {/* Badge legend */}
+            <div className="flex flex-wrap gap-2 p-3 bg-white border border-border rounded-lg">
+              <span className="text-[10px] text-muted-foreground font-semibold mr-1">Classification:</span>
+              <FumeBadge type="confirmed_fact" />
+              <FumeBadge type="client_reported" />
+              <FumeBadge type="ai_inference" />
+              <FumeBadge type="missing_information" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {report.allEvidence.map((e, i) => (
+                <div
+                  key={i}
+                  className="p-3 bg-white border border-border/60 rounded-lg flex flex-col gap-2"
+                  data-testid={`evidence-card-${i}`}
+                >
+                  <p className="text-[13px] text-foreground/80 italic leading-snug">"{e.quote}"</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground font-medium">Day {e.day}</span>
+                    <FumeBadge type={e.classification} />
                   </div>
-                  <p className="text-sm text-foreground/80 pl-2">Nutritional adherence below 50%</p>
                 </div>
-
-                <div className="p-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900 flex flex-col gap-2 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
-                  <div className="flex justify-between items-start pl-2">
-                    <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-semibold text-sm">
-                      <Flag className="w-3.5 h-3.5" /> MEDIUM RISK
-                    </div>
-                    <FumeBadge type="inference">AI Inference</FumeBadge>
-                  </div>
-                  <p className="text-sm text-foreground/80 pl-2">Stress at 7-8/10 sustained</p>
-                </div>
-              </div>
+              ))}
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                <CheckCircle className="w-4 h-4 text-blue-500" /> Key Barriers
-              </h3>
-              <Card className="shadow-sm">
-                <CardContent className="p-4">
-                  <ul className="space-y-3">
-                    <li className="flex gap-2 items-start text-sm">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                      <span className="text-foreground/80 font-medium">Elevated work stress <span className="text-muted-foreground font-normal">(primary driver)</span></span>
-                    </li>
-                    <li className="flex gap-2 items-start text-sm">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                      <span className="text-foreground/80 font-medium">Late sleep schedule disrupting morning routine</span>
-                    </li>
-                    <li className="flex gap-2 items-start text-sm">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                      <span className="text-foreground/80 font-medium">Convenience food reliance under pressure</span>
-                    </li>
-                    <li className="flex gap-2 items-start text-sm">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                      <span className="text-foreground/80 font-medium">Low hydration consistency</span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
+            {/* Missing information notice */}
+            <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg">
+              <p className="text-[11px] text-muted-foreground font-semibold mb-1">Missing Information</p>
+              <ul className="space-y-1">
+                <li className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <FumeBadge type="missing_information" />
+                  Water intake not explicitly reported on Days 1, 2, 4, 5, 6
+                </li>
+                <li className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <FumeBadge type="missing_information" />
+                  Step count not mentioned on Days 1, 2, 5, 6
+                </li>
+                <li className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  <FumeBadge type="missing_information" />
+                  Mood / energy rating not systematically tracked
+                </li>
+              </ul>
             </div>
-            
-          </motion.div>
+          </div>
 
-          {/* 7. Recommended Next Action */}
-          <motion.div variants={itemVariants}>
-            <Card className="bg-primary border-primary shadow-md overflow-hidden relative">
-              <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                <Brain className="w-32 h-32 text-primary-foreground" />
-              </div>
-              <CardContent className="p-6 relative z-10">
-                <div className="flex items-center gap-2 text-primary-foreground/80 font-semibold text-xs tracking-wider uppercase mb-3">
-                  <Calendar className="w-4 h-4" /> Recommended Next Action
-                </div>
-                <p className="text-primary-foreground text-lg leading-snug font-medium">
-                  Schedule a 15-minute mid-week check-in focused on sleep hygiene and stress management. Provide a simplified meal prep guide for busy work weeks.
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* 5. Pending Actions (Checklist) */}
-          <motion.div variants={itemVariants} className="space-y-4">
-            <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
-              <CheckCircle className="w-4 h-4 text-foreground/70" /> Pending Coach Actions
-            </h3>
-            <Card className="shadow-sm">
-              <CardContent className="p-2">
-                <div className="flex flex-col">
-                  {actions.map((action, idx) => (
-                    <div 
-                      key={action.id} 
-                      className={`flex items-center gap-3 p-3 rounded-md transition-colors hover:bg-secondary/50 cursor-pointer ${idx !== actions.length - 1 ? 'border-b border-border/40' : ''}`}
-                      onClick={() => toggleAction(action.id)}
-                    >
-                      <Checkbox 
-                        id={`action-${action.id}`} 
-                        checked={action.checked}
-                        onCheckedChange={() => toggleAction(action.id)}
-                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                      />
-                      <label 
-                        htmlFor={`action-${action.id}`}
-                        className={`text-sm font-medium flex-1 cursor-pointer transition-all ${action.checked ? 'text-muted-foreground line-through' : 'text-foreground/90'}`}
-                      >
-                        {action.label}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <Separator className="my-2 opacity-50" />
-
-          {/* 8. Evidence — Supporting Quotes */}
-          <motion.div variants={itemVariants} className="space-y-4">
-            <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
-              <MessageSquareQuote className="w-4 h-4 text-foreground/70" /> Evidence
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
-              <div className="p-4 bg-secondary rounded-lg border border-border/50 flex flex-col justify-between gap-3 relative">
-                <MessageSquareQuote className="w-6 h-6 text-primary/10 absolute top-2 right-2" />
-                <p className="text-sm text-foreground/80 italic font-medium relative z-10">"I'm staying up too late and then I can't get up."</p>
-                <div className="flex justify-start">
-                  <FumeBadge type="reported">Client Reported</FumeBadge>
-                </div>
-              </div>
-
-              <div className="p-4 bg-secondary rounded-lg border border-border/50 flex flex-col justify-between gap-3 relative">
-                <MessageSquareQuote className="w-6 h-6 text-primary/10 absolute top-2 right-2" />
-                <p className="text-sm text-foreground/80 italic font-medium relative z-10">"I grabbed fast food three times this week."</p>
-                <div className="flex justify-start">
-                  <FumeBadge type="reported">Client Reported</FumeBadge>
-                </div>
-              </div>
-
-              <div className="p-4 bg-secondary rounded-lg border border-border/50 flex flex-col justify-between gap-3 relative">
-                <MessageSquareQuote className="w-6 h-6 text-primary/10 absolute top-2 right-2" />
-                <p className="text-sm text-foreground/80 italic font-medium relative z-10">"My sleep tracker shows I'm only getting 5-6 hours."</p>
-                <div className="flex justify-start">
-                  <FumeBadge type="fact">Confirmed Fact</FumeBadge>
-                </div>
-              </div>
-
-              <div className="p-4 bg-secondary rounded-lg border border-border/50 flex flex-col justify-between gap-3 relative">
-                <MessageSquareQuote className="w-6 h-6 text-primary/10 absolute top-2 right-2" />
-                <p className="text-sm text-foreground/80 italic font-medium relative z-10">"I feel like I'm backsliding."</p>
-                <div className="flex justify-start">
-                  <FumeBadge type="inference">AI Inference (Emotion)</FumeBadge>
-                </div>
-              </div>
-
-            </div>
-          </motion.div>
-
-        </motion.div>
+        </div>
       </ScrollArea>
     </div>
   );

@@ -1,37 +1,36 @@
-import React from 'react';
+import { type ClassificationType } from '@/data/analysisData';
 
-type BadgeType = 'fact' | 'reported' | 'inference' | 'missing';
+const CONFIG: Record<ClassificationType, { label: string; className: string }> = {
+  confirmed_fact: {
+    label: 'Confirmed Fact',
+    className: 'bg-blue-600 text-white border-blue-700',
+  },
+  client_reported: {
+    label: 'Client Reported',
+    className: 'bg-green-50 text-green-700 border-green-300',
+  },
+  ai_inference: {
+    label: 'AI Inference',
+    className: 'bg-violet-50 text-violet-700 border-violet-300',
+  },
+  missing_information: {
+    label: 'Missing Information',
+    className: 'bg-slate-50 text-slate-500 border-slate-300',
+  },
+};
 
 interface FumeBadgeProps {
-  type: BadgeType;
-  children: React.ReactNode;
-  className?: string;
+  type: ClassificationType;
+  children?: string;
 }
 
-export function FumeBadge({ type, children, className = '' }: FumeBadgeProps) {
-  let styles = '';
-  switch (type) {
-    case 'fact':
-      // Confirmed Fact: solid blue background, white text
-      styles = 'bg-primary text-primary-foreground font-medium';
-      break;
-    case 'reported':
-      // Client Reported: green/teal outline badge
-      styles = 'border border-teal-600 text-teal-700 bg-teal-50 dark:bg-teal-950 dark:text-teal-400 dark:border-teal-800';
-      break;
-    case 'inference':
-      // AI Inference: purple/violet outline or subtle background
-      styles = 'border border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800';
-      break;
-    case 'missing':
-      // Missing Information: gray outline
-      styles = 'border border-gray-300 text-gray-600 bg-gray-50 dark:bg-gray-900 dark:text-gray-400 dark:border-gray-700';
-      break;
-  }
-
+export function FumeBadge({ type, children }: FumeBadgeProps) {
+  const { label, className } = CONFIG[type];
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${styles} ${className}`}>
-      {children}
+    <span
+      className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded border whitespace-nowrap ${className}`}
+    >
+      {children ?? label}
     </span>
   );
 }

@@ -1,79 +1,179 @@
-import React from 'react';
+import { useState } from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { sampleConversation, type ConversationDay } from '@/data/conversationData';
+import { MessageSquare, Edit3, X } from 'lucide-react';
 
-interface Message {
-  id: string;
-  sender: 'coach' | 'client';
-  text: string;
-  time: string;
+interface ConversationPanelProps {
+  customText: string;
+  onCustomTextChange: (text: string) => void;
+  isCustomMode: boolean;
+  onToggleMode: (custom: boolean) => void;
 }
 
-const mockMessages: Message[] = [
-  { id: '1', sender: 'coach', text: "How are you feeling this week?", time: '10:00 AM' },
-  { id: '2', sender: 'client', text: "Honestly, pretty tired. I've been skipping my morning walks.", time: '10:02 AM' },
-  { id: '3', sender: 'coach', text: "What's been getting in the way?", time: '10:03 AM' },
-  { id: '4', sender: 'client', text: "Work stress mostly. I'm staying up too late and then I can't get up.", time: '10:06 AM' },
-  { id: '5', sender: 'coach', text: "How has your nutrition been?", time: '10:08 AM' },
-  { id: '6', sender: 'client', text: "Not great. I grabbed fast food three times this week. I know I shouldn't.", time: '10:12 AM' },
-  { id: '7', sender: 'coach', text: "Are you tracking your water intake?", time: '10:14 AM' },
-  { id: '8', sender: 'client', text: "Sometimes. Maybe 4 glasses a day, not the 8 you recommended.", time: '10:15 AM' },
-  { id: '9', sender: 'coach', text: "How are your stress levels on a scale of 1-10?", time: '10:20 AM' },
-  { id: '10', sender: 'client', text: "Like a 7 or 8 honestly. Work is really intense right now.", time: '10:21 AM' },
-  { id: '11', sender: 'coach', text: "Have you been experiencing any physical symptoms?", time: '10:23 AM' },
-  { id: '12', sender: 'client', text: "Some headaches. And my sleep tracker shows I'm only getting 5-6 hours.", time: '10:25 AM' },
-  { id: '13', sender: 'coach', text: "What about your steps goal?", time: '10:27 AM' },
-  { id: '14', sender: 'client', text: "I hit it twice this week. The other days were under 3,000.", time: '10:29 AM' },
-  { id: '15', sender: 'coach', text: "How are you feeling emotionally about your progress?", time: '10:31 AM' },
-  { id: '16', sender: 'client', text: "Discouraged, honestly. I feel like I'm backsliding.", time: '10:32 AM' },
-  { id: '17', sender: 'coach', text: "I hear you. Let's look at what's working and build from there.", time: '10:35 AM' },
-];
+function parseCustomConversation(text: string): ConversationDay[] {
+  const dayBlocks = text.split(/\n(?=Day\s+\d+)/i).filter(b => b.trim());
+  return dayBlocks.map((block, idx) => {
+    const lines = block.split('\n').filter(l => l.trim());
+    const dayLine = lines[0];
+    const dayNum = parseInt(dayLine.replace(/[^0-9]/g, ''), 10) || idx + 1;
+    const messages = lines.slice(1).map(line => {
+      const lower = line.toLowerCase();
+      if (lower.startsWith('coach:')) {
+        return { sender: 'coach' as const, text: line.replace(/^coach:\s*/i, '').trim() };
+      } else if (lower.startsWith('accountability coach:') || lower.startsWith('system:')) {
+        return { sender: 'system' as const, text: line.replace(/^(accountability coach|system):\s*/i, '').trim() };
+      } else {
+        return { sender: 'client' as const, text: line.replace(/^client:\s*/i, '').trim() };
+      }
+    }).filter(m => m.text.length > 0);
+    return { day: dayNum, messages };
+  });
+}
 
-export function ConversationPanel() {
+export function ConversationPanel({
+  customText,
+  onCustomTextChange,
+  isCustomMode,
+  onToggleMode,
+}: ConversationPanelProps) {
+  const [isEditing, setIsEditing] = useState(false);
+
+  const days: ConversationDay[] = isCustomMode && customText.trim()
+    ? parseCustomConversation(customText)
+    : sampleConversation;
+
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-card border-r border-border">
+    <div className="flex flex-col h-full bg-white border-r border-border">
       {/* Header */}
-      <div className="px-6 py-5 border-b border-border flex items-center justify-between shrink-0 bg-background/50">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">Client Conversation</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Sarah M. &bull; Session Date: July 14, 2026</p>
+      <div className="px-4 py-3 border-b border-border shrink-0 bg-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Client Conversation</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isCustomMode && customText.trim() ? 'Custom conversation' : '8-Day Sample Conversation'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {isCustomMode ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs h-7 gap-1"
+                onClick={() => { onToggleMode(false); setIsEditing(false); }}
+              >
+                <X className="w-3 h-3" /> Sample
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs h-7 gap-1"
+                onClick={() => { onToggleMode(true); setIsEditing(true); }}
+              >
+                <Edit3 className="w-3 h-3" /> Custom
+              </Button>
+            )}
+          </div>
         </div>
-        <Avatar className="h-10 w-10 border shadow-sm">
-          <AvatarFallback className="bg-primary/10 text-primary font-medium">SM</AvatarFallback>
-        </Avatar>
+
+        {/* Mode tabs */}
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => { onToggleMode(false); setIsEditing(false); }}
+            className={`text-xs px-2 py-1 rounded border transition-colors ${!isCustomMode ? 'bg-primary text-white border-primary' : 'border-border text-muted-foreground hover:bg-slate-50'}`}
+          >
+            Sample Data
+          </button>
+          <button
+            onClick={() => { onToggleMode(true); setIsEditing(true); }}
+            className={`text-xs px-2 py-1 rounded border transition-colors ${isCustomMode ? 'bg-primary text-white border-primary' : 'border-border text-muted-foreground hover:bg-slate-50'}`}
+          >
+            Paste Custom
+          </button>
+        </div>
       </div>
 
-      {/* Messages Area */}
-      <ScrollArea className="flex-1 px-6 py-6">
-        <div className="flex flex-col gap-4 pb-8">
-          {mockMessages.map((msg) => {
-            const isCoach = msg.sender === 'coach';
-            return (
-              <div 
-                key={msg.id} 
-                className={`flex max-w-[85%] ${isCoach ? 'self-start' : 'self-end flex-row-reverse'}`}
-              >
-                <div className={`flex flex-col gap-1 ${isCoach ? 'items-start' : 'items-end'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {isCoach ? 'Coach' : 'Sarah'}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground/60">{msg.time}</span>
-                  </div>
-                  <div 
-                    className={`
-                      px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed shadow-sm
-                      ${isCoach 
-                        ? 'bg-secondary text-secondary-foreground rounded-tl-sm border border-border/40' 
-                        : 'bg-primary text-primary-foreground rounded-tr-sm'}
-                    `}
-                  >
-                    {msg.text}
-                  </div>
-                </div>
+      {/* Custom text input */}
+      {isCustomMode && isEditing && (
+        <div className="px-4 py-3 border-b border-border bg-slate-50 shrink-0">
+          <p className="text-xs text-muted-foreground mb-2">
+            Paste conversation below. Format each section as "Day N" followed by lines starting with "Coach:" or "Client:".
+          </p>
+          <textarea
+            className="w-full h-32 text-xs p-2 border border-border rounded resize-none focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+            placeholder={'Day 1\nClient: Good morning...\nCoach: How are you feeling?\n\nDay 2\nClient: ...'}
+            value={customText}
+            onChange={e => onCustomTextChange(e.target.value)}
+          />
+          <div className="flex gap-2 mt-2">
+            <Button size="sm" className="text-xs h-7" onClick={() => setIsEditing(false)}>
+              Preview
+            </Button>
+            <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => { onCustomTextChange(''); setIsEditing(false); onToggleMode(false); }}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Messages */}
+      <ScrollArea className="flex-1 px-3 py-3">
+        <div className="flex flex-col gap-5 pb-8">
+          {days.map(({ day, messages }) => (
+            <div key={day}>
+              {/* Day separator */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs font-semibold text-primary bg-primary/5 border border-primary/20 px-2 py-0.5 rounded-full">
+                  Day {day}
+                </span>
+                <div className="flex-1 h-px bg-border" />
               </div>
-            );
-          })}
+
+              <div className="flex flex-col gap-2.5">
+                {messages.map((msg, idx) => {
+                  if (msg.sender === 'system') {
+                    return (
+                      <div key={idx} className="flex items-start gap-2 self-center w-full">
+                        <div className="w-full text-center">
+                          <span className="inline-block text-[11px] text-muted-foreground bg-slate-100 border border-border/50 px-3 py-1 rounded-full">
+                            <MessageSquare className="inline w-3 h-3 mr-1 -mt-0.5" />
+                            {msg.text}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  const isCoach = msg.sender === 'coach';
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex max-w-[88%] ${isCoach ? 'self-start' : 'self-end flex-row-reverse'}`}
+                    >
+                      <div className={`flex flex-col gap-1 ${isCoach ? 'items-start' : 'items-end'}`}>
+                        {idx === 0 || messages[idx - 1]?.sender !== msg.sender ? (
+                          <span className="text-[10px] font-medium text-muted-foreground px-1">
+                            {isCoach ? 'Coach' : 'Client'}
+                          </span>
+                        ) : null}
+                        <div
+                          className={`px-3 py-2 rounded-xl text-[13px] leading-snug shadow-sm ${
+                            isCoach
+                              ? 'bg-slate-100 text-foreground rounded-tl-sm border border-border/40'
+                              : 'bg-primary text-primary-foreground rounded-tr-sm'
+                          }`}
+                        >
+                          {msg.text}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </ScrollArea>
     </div>
