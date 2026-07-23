@@ -102,8 +102,12 @@ function SectionCard({
   );
 }
 
-export function AnalysisPanel() {
-  const report = sampleAnalysis;
+interface AnalysisPanelProps {
+  report?: typeof sampleAnalysis;
+}
+
+export function AnalysisPanel({ report: reportProp }: AnalysisPanelProps = {}) {
+  const report = reportProp ?? sampleAnalysis;
 
   const [pendingActions, setPendingActions] = useState(
     report.pendingActions.map((a, i) => ({ ...a, id: String(i), checked: false }))
