@@ -1,6 +1,26 @@
 import { type ConversationDay } from './conversationData';
 import { type AnalysisReport, type Evidence, type ClassificationType } from './analysisData';
 
+// ─── Health conversation detector ─────────────────────────────────────────────
+
+/**
+ * Returns true only if the conversation contains enough health-related content
+ * to be meaningfully analyzed by the health coaching analyzer.
+ * A business, sales, or general conversation will return false.
+ */
+export function isHealthConversation(days: ConversationDay[]): boolean {
+  // Core health signals — must be present as whole words / meaningful phrases
+  const strongHealthKeywords = /\b(sleep|slept|awake|woke|rest|tired|fatigue|exhausted|water|hydrat|exercise|walk(?:ing|ed)?|run(?:ning|ned)?|jog(?:ging|ged)?|yoga|gym|workout|steps?|meal|breakfast|lunch|dinner|food|eat(?:ing|en)?|ate|diet|nutrition|calori|protein|symptom|acidity|headache|migraine|stress|anxious|anxiety|pain|ache|sore|sick|ill(?:ness)?|health|fitness|weight|kg|bmi|body|blood|sugar|pressure|bowel|digestion|energy level|mood)\b/i;
+  let hits = 0;
+  for (const { messages } of days) {
+    for (const msg of messages) {
+      if (strongHealthKeywords.test(msg.text)) hits++;
+    }
+  }
+  // Require at least 3 health-related messages across the whole conversation
+  return hits >= 3;
+}
+
 // ─── Extraction helpers ───────────────────────────────────────────────────────
 
 function extractSleepHours(text: string): number | null {

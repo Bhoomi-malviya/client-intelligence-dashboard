@@ -99,7 +99,7 @@ export function ConversationPanel({
       {isCustomMode && isEditing && (
         <div className="px-4 py-3 border-b border-border bg-slate-50 shrink-0">
           <p className="text-xs text-muted-foreground mb-2">
-            Paste conversation below. Format each section as "Day N" followed by lines starting with "Coach:" or "Client:".
+            Paste a <strong>health coach–client conversation</strong> below. Format each day as "Day N" followed by lines starting with "Client:" or "Coach:". The analyzer extracts sleep, exercise, nutrition, water, and symptoms.
           </p>
           <textarea
             className="w-full h-32 text-xs p-2 border border-border rounded resize-none focus:outline-none focus:ring-1 focus:ring-primary font-mono"

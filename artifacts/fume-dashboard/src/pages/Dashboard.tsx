@@ -3,10 +3,10 @@ import { ConversationPanel } from '@/components/ConversationPanel';
 import { ActionBar } from '@/components/ActionBar';
 import { AnalysisPanel } from '@/components/AnalysisPanel';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, Loader2 } from 'lucide-react';
+import { Bot, Loader2, AlertTriangle } from 'lucide-react';
 import { sampleAnalysis, type AnalysisReport } from '@/data/analysisData';
 import { sampleConversation } from '@/data/conversationData';
-import { analyzeConversation } from '@/data/conversationAnalyzer';
+import { analyzeConversation, isHealthConversation } from '@/data/conversationAnalyzer';
 
 // ── Custom conversation parser (mirrors ConversationPanel's parser) ────────────
 function parseCustomConversation(text: string) {
@@ -59,10 +59,12 @@ export default function Dashboard() {
   const [activeReport, setActiveReport] = useState<AnalysisReport | null>(null);
   const [customText, setCustomText] = useState('');
   const [isCustomMode, setIsCustomMode] = useState(false);
+  const [wrongConversationType, setWrongConversationType] = useState(false);
   const { toast } = useToast();
 
   const handleAnalyze = () => {
     setIsAnalyzing(true);
+    setWrongConversationType(false);
 
     // Small delay so the spinner renders before the (synchronous) parsing work
     setTimeout(() => {
@@ -76,6 +78,13 @@ export default function Dashboard() {
               description: 'Make sure each day starts with "Day N" followed by "Client:" and "Coach:" lines.',
               variant: 'destructive',
             });
+            setIsAnalyzing(false);
+            return;
+          }
+          // Check if this is actually a health coaching conversation
+          if (!isHealthConversation(parsed)) {
+            setWrongConversationType(true);
+            setActiveReport(null);
             setIsAnalyzing(false);
             return;
           }
@@ -95,7 +104,7 @@ export default function Dashboard() {
   };
 
   const handleApprove = () => toast({ title: 'Approved', description: 'Insights saved to client record.' });
-  const handleReject = () => { toast({ title: 'Rejected', description: 'Flagged for manual review.', variant: 'destructive' }); setActiveReport(null); };
+  const handleReject = () => { toast({ title: 'Rejected', description: 'Flagged for manual review.', variant: 'destructive' }); setActiveReport(null); setWrongConversationType(false); };
   const handleEdit = () => toast({ title: 'Edit Mode', description: 'You can now edit the generated insights.' });
 
   const handleExportJson = () => {
@@ -143,6 +152,36 @@ export default function Dashboard() {
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
             <p className="text-sm text-muted-foreground">
               {isCustomMode ? 'Analyzing your conversation…' : 'Loading sample analysis…'}
+            </p>
+          </div>
+        ) : wrongConversationType ? (
+          <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+            <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mb-4 border border-amber-200">
+              <AlertTriangle className="w-8 h-8 text-amber-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Not a Health Coaching Conversation</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mb-4">
+              This tool is designed specifically for <strong>health coach–client conversations</strong> — it extracts health metrics like sleep, exercise, nutrition, water intake, and symptoms.
+            </p>
+            <div className="bg-white border border-amber-200 rounded-lg p-4 max-w-sm text-left mb-5">
+              <p className="text-xs font-semibold text-amber-700 mb-2 uppercase tracking-wide">What was pasted doesn't contain health data such as:</p>
+              <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Sleep hours or rest quality</li>
+                <li>Exercise, steps, or physical activity</li>
+                <li>Meals, food, or nutrition</li>
+                <li>Water intake or hydration</li>
+                <li>Symptoms, stress, or health complaints</li>
+              </ul>
+            </div>
+            <p className="text-xs text-muted-foreground max-w-xs">
+              Please paste a real health coach–client conversation, or click{' '}
+              <button
+                className="text-primary underline font-medium"
+                onClick={() => { setWrongConversationType(false); setIsCustomMode(false); setActiveReport(null); }}
+              >
+                Sample Data
+              </button>{' '}
+              to see an example of the expected format.
             </p>
           </div>
         ) : activeReport !== null ? (
