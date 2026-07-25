@@ -196,4 +196,4 @@ The 8-day sample conversation is based on a real health coaching interaction and
 ## 👩‍💻 Author
 
 **Bhoomi Malviya**
-GenAI Product Intern Candidate — FUME
+
